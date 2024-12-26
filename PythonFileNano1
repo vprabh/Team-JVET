@@ -1,0 +1,47 @@
+import serial
+import time
+
+
+# Initialize serial communication with Arduino
+ser = serial.Serial('COM4', 9600, timeout=1)  # Replace 'COM3' with your Arduino's port
+time.sleep(2)
+
+
+# Function to parse data from Arduino
+def parse_data(data):
+    try:
+        parts = data.strip().split(',')
+        if len(parts) == 3:
+            temperature = float(parts[0])
+            humidity = float(parts[1])
+            air_quality = float(parts[2])
+            return temperature, humidity, air_quality
+    except ValueError:
+        return None, None, None
+
+
+    return None, None, None
+
+
+# Main loop
+try:
+    while True:
+        if ser.in_waiting > 0:
+            arduino_data = ser.readline().decode('utf-8').strip()
+            temperature, humidity, air_quality = parse_data(arduino_data)
+
+
+            if temperature is not None:
+                print(f"Temperature: {temperature} C")
+                print(f"Humidity: {humidity} %")
+                print(f"Air Quality: {air_quality} ppm")
+            else:
+                print("Invalid data received from Arduino.")
+
+
+        time.sleep(1)
+
+
+except KeyboardInterrupt:
+    print("Exiting...")
+    ser.close()

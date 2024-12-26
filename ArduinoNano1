@@ -1,0 +1,80 @@
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+#include <DHT.h>
+#include <Adafruit_NeoPixel.h>
+
+// I2C LCD setup
+LiquidCrystal_I2C lcd(0x27, 16, 2);  // Adjust the address (0x27 is default for most displays)
+
+// DHT11 setup
+#define DHTPIN 2
+#define DHTTYPE DHT11
+DHT dht(DHTPIN, DHTTYPE);
+
+// MQ135 setup
+#define MQ135PIN A0
+
+// WS2812 LED setup
+#define LED_PIN 6          // Pin connected to the Data In of the WS2812 strip
+#define NUM_LEDS 8         // Number of LEDs in the strip
+Adafruit_NeoPixel strip(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
+
+void setup() {
+  Serial.begin(9600);  // Initialize serial communication
+  dht.begin();         // Initialize DHT sensor
+  lcd.init();          // Initialize LCD (replace lcd.begin() with lcd.init())
+  lcd.backlight();     // Turn on LCD backlight
+  strip.begin();       // Initialize WS2812 LED strip
+  strip.show();        // Initialize all LEDs to off
+}
+
+void loop() {
+  float temperature = dht.readTemperature();
+  float humidity = dht.readHumidity();
+  int airQualityRaw = analogRead(MQ135PIN);
+  float airQualityPPM = airQualityRaw * 0.1;  // Adjust the calibration factor as needed
+
+  if (isnan(temperature) || isnan(humidity)) {
+    Serial.println("Error reading from DHT sensor!");
+    lcd.clear();
+    lcd.print("Sensor Error");
+  } else {
+    // Send data to Python via Serial
+    Serial.print(temperature);
+    Serial.print(",");
+    Serial.print(humidity);
+    Serial.print(",");
+    Serial.println(airQualityPPM);
+
+    // Display data on LCD
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Temp: ");
+    lcd.print(temperature);
+    lcd.print("C");
+    lcd.setCursor(0, 1);
+    lcd.print("Hum: ");
+    lcd.print(humidity);
+    lcd.print("% AQ:");
+    lcd.print(airQualityPPM);
+
+    // Set LED color based on air quality
+    if (airQualityPPM <= 30) {
+      setLEDColor(0, 255, 0);  // Green: Good air quality
+    } else if (airQualityPPM <= 70) {
+      setLEDColor(255, 255, 0);  // Yellow: Moderate air quality
+    } else {
+      setLEDColor(255, 0, 0);  // Red: Poor air quality
+    }
+  }
+
+  delay(2000);  // Wait for 2 seconds before next reading
+}
+
+// Function to set the entire LED strip color
+void setLEDColor(int red, int green, int blue) {
+  for (int i = 0; i < strip.numPixels(); i++) {
+    strip.setPixelColor(i, strip.Color(red, green, blue));
+  }
+  strip.show();  // Apply the color changes to the strip
+}

@@ -1,0 +1,82 @@
+#include <Wire.h>
+#include <Adafruit_TSL2561_U.h>  // Correct header file for Adafruit's library
+#include <LiquidCrystal_I2C.h>   // Include the I2C LCD library
+
+
+// Create an instance of the TSL2561 sensor object
+Adafruit_TSL2561_Unified tsl = Adafruit_TSL2561_Unified(12345);
+
+
+// Initialize the LCD (address 0x27, 16 columns and 2 rows)
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+
+// Pin for soil moisture sensor
+const int moisturePin = A0;  // Assuming soil moisture sensor is connected to A0
+
+
+void setup() {
+  Serial.begin(9600);  // Start serial communication at 9600 baud rate
+  
+  if (!tsl.begin()) {  // Initialize the TSL2561 sensor
+    Serial.println("Couldn't find the TSL2561 sensor");
+    while (1);  // Stop execution if sensor not found
+  }
+
+
+  Serial.println("TSL2561 sensor found!");
+
+
+  // Set the sensor's gain (you can choose 1X or 16X gain)
+  tsl.setGain(TSL2561_GAIN_16X); // Set to 16X gain
+
+
+  // Enable auto range (sensor will automatically adjust range)
+  tsl.enableAutoRange(true); // Automatically adjust the range
+
+
+  // Initialize the LCD
+  lcd.begin(16, 2);  // Set the LCD size to 16 columns and 2 rows
+  lcd.backlight();  // Turn on the backlight
+}
+
+
+void loop() {
+  // Read the soil moisture level
+  int soilMoisture = analogRead(moisturePin);  // Read the moisture level from the sensor
+
+
+  // Get the luminosity values from the TSL2561 sensor
+  uint16_t broadband, ir;
+  tsl.getLuminosity(&broadband, &ir);
+
+
+  // Calculate the lux value from the broadband and infrared readings
+  float luminosity = tsl.calculateLux(broadband, ir);
+
+
+  // Send the soil moisture and luminosity data via serial
+  Serial.print("Soil Moisture: ");
+  Serial.print(soilMoisture);  // Send the soil moisture level
+  Serial.print(", Luminosity: ");
+  Serial.println(luminosity);  // Send the luminosity level
+
+
+  // Display data on the LCD
+  lcd.clear();  // Clear the LCD screen
+
+
+  // Print the soil moisture on the first row
+  lcd.setCursor(0, 0);  // Set the cursor to the first row, first column
+  lcd.print("Soil Moist: ");
+  lcd.print(soilMoisture);  // Print the soil moisture value
+
+
+  // Print the luminosity on the second row
+  lcd.setCursor(0, 1);  // Set the cursor to the second row, first column
+  lcd.print("Lux: ");
+  lcd.print(luminosity);  // Print the luminosity value
+
+
+  delay(2000);  // Wait for 2 seconds before updating the LCD again
+}

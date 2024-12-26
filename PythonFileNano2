@@ -1,0 +1,44 @@
+import serial
+import time
+
+
+# Set the serial port and baud rate (make sure the port matches the one Arduino is using)
+arduino_port = "COM5"  # Change this to the correct port
+baud = 9600            # Baud rate (must match the Arduino baud rate)
+
+
+# Establish serial connection
+ser = serial.Serial(arduino_port, baud)
+
+
+# Wait for the connection to be established
+time.sleep(2)
+
+
+# Continuously read data from Arduino and display it
+while True:
+    if ser.in_waiting > 0:
+        # Read the line from Arduino
+        data = ser.readline().decode('utf-8').strip()  # Read and decode the data
+       
+        # Ignore invalid data at the start
+        if "Soil Moisture" in data and "Luminosity" in data:
+            # Split the data based on the comma delimiter
+            try:
+                moisture_data, luminosity_data = data.split(', ')
+                moisture_value = moisture_data.split(': ')[1]  # Extract the value after "Soil Moisture: "
+                luminosity_value = luminosity_data.split(': ')[1]  # Extract the value after "Luminosity: "
+               
+                # Display the values
+                print(f"Soil Moisture Level: {moisture_value}")
+                print(f"Luminosity: {luminosity_value} lux")
+            except ValueError:
+                print("Invalid data received.")
+        else:
+            print("Waiting for valid data...")  # Optional: display a message while waiting for valid data
+           
+    time.sleep(1)  # Delay before reading the next set of data
+
+
+
+
